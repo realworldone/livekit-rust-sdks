@@ -35,11 +35,17 @@
 // referenced `__sF`, but that symbol was removed in NDK 28+.
 // Use POSIX `fdopen()` with the standard file descriptors instead — works
 // across all NDK versions.
+// Needed only below API 23, since bionic exports real stdout/stderr from 23 up.
+// These run as static initializers, and fdopen takes fdsan ownership of the fd,
+// which aborts in a host that already holds its own FILE* for fd 1/2. dup() so
+// the fd handed to fdopen is one we own.
+#if defined(__ANDROID__) && __ANDROID_API__ < 23
 #undef stdout
-FILE *stdout = fdopen(STDOUT_FILENO, "w");
+FILE *stdout = fdopen(dup(STDOUT_FILENO), "w");
 
 #undef stderr
-FILE *stderr = fdopen(STDERR_FILENO, "w");
+FILE *stderr = fdopen(dup(STDERR_FILENO), "w");
+#endif
 
 namespace livekit_ffi {
 
